@@ -4,29 +4,28 @@ require "http"
 require "net/http"
 require "json"
 
-get("/") do
-  url = "https://api.exchangerate.host/latest"
+def api_lookup
+  url = "https://api.exchangerate.host/symbols"
   uri = URI(url)
   response = Net::HTTP.get(uri)
   response_obj = JSON.parse(response)
 
-  @base_currency = response_obj["base"]
-  @rates = response_obj["rates"]
-  @currencies = @rates.keys
- 
+  symbols_hash = response_obj.fetch("symbols")
+  list_currency = symbols_hash.keys
+
+  return list_currency
+end
+
+get("/") do
+
+  @list_currency = api_lookup
   erb(:pairs)
 end
 
 get("/:converting") do  
-  url = "https://api.exchangerate.host/latest"
-  uri = URI(url)
-  response = Net::HTTP.get(uri)
-  response_obj = JSON.parse(response)
 
-  @base_currency = response_obj["base"]
-  @rates = response_obj["rates"]
+  @list_currency = api_lookup
   @from_currency = params[:converting]
-  @currencies = @rates.keys
 
   erb(:converting)
 end
@@ -38,13 +37,9 @@ get("/:converting/:converted") do
   url = "https://api.exchangerate.host/convert?from=#{@from_currency}&to=#{@to_currency}"
   uri = URI(url)
   response = Net::HTTP.get(uri)
-  @conversion_data = JSON.parse(response)
+  conversion_data = JSON.parse(response)
 
-  @amount = @conversion_data["query"]["amount"]
-  @from_currency = @conversion_data["query"]["from"]
-  @to_currency = @conversion_data["query"]["to"]
-  @conversion_rate = @conversion_data["info"]["rate"]
-  @result = @conversion_data["result"]
+  @rate = conversion_data.fetch("info").fetch("rate")
 
   erb(:converted)
 end
